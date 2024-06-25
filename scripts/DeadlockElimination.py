@@ -116,94 +116,80 @@ class DeadlockElimination:
         
         init_states = len(states)
         
-        while(1):
-            
+        split_state = lambda s: list(map(int, s.split('-')))
+        
+        while True:
             memory = np.full((self.num_zones, self.num_timeslots, self.num_timeslots + 1), -1)
-            
+        
             for state in states:
-                
-                arrival_time = int(state.split('-')[0])
-                arrival_zone = int(state.split('-')[1])
-                state_stay_duration = int(state.split('-')[2])
-                
-                memory[arrival_zone][arrival_time][state_stay_duration] = 1
-                
-            self.list_time_min = [[[] for j in range(self.num_timeslots)] for i in range(self.num_zones)]
-            self.list_time_max = [[[] for j in range(self.num_timeslots)] for i in range(self.num_zones)]
-            
+                arrival_time, arrival_zone, state_stay_duration = split_state(state)
+                try:
+                    memory[arrival_zone][arrival_time][state_stay_duration] = 1
+                except:
+                    pass
+        
+            self.list_time_min = [[[] for _ in range(self.num_timeslots)] for _ in range(self.num_zones)]
+            self.list_time_max = [[[] for _ in range(self.num_timeslots)] for _ in range(self.num_zones)]
+        
             for arrival_zone in range(self.num_zones):
                 for arrival_time in range(self.num_timeslots):
+                    list_time_min_zone = self.list_time_min[arrival_zone]
+                    list_time_max_zone = self.list_time_max[arrival_zone]
                     flag = 0
                     for duration in range(1, self.num_timeslots):
                         if flag == 0 and memory[arrival_zone][arrival_time][duration] == 1:
-                            self.list_time_min[arrival_zone][arrival_time].append(duration)
+                            list_time_min_zone[arrival_time].append(duration)
                             flag = 1
                             if duration == self.num_timeslots - 1:
-                                self.list_time_max[arrival_zone][arrival_time].append(duration)
-                                flag = 0    
-                            
-                        if flag == 1 and memory[arrival_zone][arrival_time][duration] == -1:
-                            self.list_time_max[arrival_zone][arrival_time].append(duration - 1)
-                            flag = 0
-                    
-            states = self.get_all_possible_states()
+                                list_time_max_zone[arrival_time].append(duration)
+                                flag = 0
         
-            # allowed zones at each arrival time
+                        if flag == 1 and memory[arrival_zone][arrival_time][duration] == -1:
+                            list_time_max_zone[arrival_time].append(duration - 1)
+                            flag = 0
+        
+            # Use sets for faster lookups
             at_zones = {}
-            
-            for i in range(len(states)):
-                state = states[i]
-                arrival_time = int(state.split('-')[0])
-                arrival_zone = int(state.split('-')[1])
-                state_stay_duration = int(state.split('-')[2])
-                
+            for i, state in enumerate(states):
+                arrival_time, arrival_zone, state_stay_duration = split_state(state)
                 self.append_set_to_dict(at_zones, arrival_time, arrival_zone)
-            
-            # create a dictionary based on arrival time (what zones are available at that arrival time)
+        
             count = 0
-            
-            states_to_pop = []
-            for i in range(len(states)):
-                state = states[i]
-                arrival_time = int(state.split('-')[0])
-                arrival_zone = int(state.split('-')[1])
-                state_stay_duration = int(state.split('-')[2])
-                
+            states_to_pop = set()
+            for i, state in enumerate(states):
+                arrival_time, arrival_zone, state_stay_duration = split_state(state)
                 if arrival_time + state_stay_duration == 1440:
                     continue
-                
                 if arrival_time + state_stay_duration not in at_zones:
                     count += 1
-                    states_to_pop.append(i)
-                    
+                    states_to_pop.add(i)
                 if state_stay_duration in self.list_time_max[arrival_zone][arrival_time]:
                     if arrival_time + state_stay_duration < self.num_timeslots:
                         if self.list_time_min[arrival_zone][arrival_time + state_stay_duration] != []:
-                            count += 1    
-                            states_to_pop.append(i)
-                                       
-            states = self.remove_indexes(states, states_to_pop)
-            
+                            count += 1
+                            states_to_pop.add(i)
+        
+            states = [state for i, state in enumerate(states) if i not in states_to_pop]
             final_states = len(states)
             
-            state_indexes = {}
-            
-            for i in range(len(states)):
-                state_indexes[states[i]] = i
+            state_indexes = {state: i for i, state in enumerate(states)}
             next_states = self.generate_next_states(states, state_indexes)
+            
             if count == 0:
                 break
+        
+        print("Execution Time:", time.time() - start_time)
         return {
             "List-Time-Min": self.list_time_min,
             "List-Time-Max": self.list_time_max,
             "States": states,
             "State-Indexes": state_indexes,
             "Next-States": next_states,
-            "Before-Removal-States" : init_states,
-            "After-Removal-States" : final_states,
+            "Before-Removal-States": init_states,
+            "After-Removal-States": final_states,
             "Execution-Time": time.time() - start_time
         }
-
+    
     # Function to append a value to a key in the dictionary
     def append_to_dict(self, d, key, value):
         d.setdefault(key, []).append(value)

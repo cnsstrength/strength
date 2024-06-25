@@ -306,32 +306,6 @@ class LinearizedADM:
                 num_anomaly += 1
                 list_time_min[zone_id][entrance].append(duration)
                 list_time_max[zone_id][entrance].append(duration)
-                
-# =============================================================================
-#         while(1):
-#             count_pop = 0
-#             count_max = 0
-#             for arrival_time in range(self.num_timeslots):
-#                 for arrival_zone in range(self.num_zones):
-#                     for cluster in range(len(list_time_min[arrival_zone][arrival_time])):
-#                         min_duration = list_time_min[arrival_zone][arrival_time][cluster]
-#                         max_duration = list_time_max[arrival_zone][arrival_time][cluster]
-#                         
-#                         if self.deadlock(list_time_min, arrival_time + min_duration, self.num_zones) == True or max_duration == 0:
-#                             list_time_min[arrival_zone][arrival_time].pop(cluster)
-#                             list_time_max[arrival_zone][arrival_time].pop(cluster)
-#                             count_pop += 1
-#                             break
-#                             
-#                         for duration in range(list_time_min[arrival_zone][arrival_time][cluster], list_time_max[arrival_zone][arrival_time][cluster] + 1):
-#                             if self.deadlock(list_time_min, arrival_time + duration, self.num_zones) == True:
-#                                 if arrival_time + duration == 1440:
-#                                     continue
-#                                 list_time_max[arrival_zone][arrival_time][cluster] = duration - 1
-#                                 count_max += 1
-#                                 break
-#             if count_pop == 0 and count_max == 0:
-#                 break 
-# =============================================================================
+
         return list_time_min, list_time_max
                 
